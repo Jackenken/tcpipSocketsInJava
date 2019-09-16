@@ -1,58 +1,67 @@
 package char06;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 public class CompressClientNoDeadLock {
-	public static final int BUFF_SIZE = 256;
-	public static String fileName = "E:/CompressTest.txt";
 
-	public static void main(String[] args) throws UnknownHostException, IOException {
-		Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), 13131);
-		File file = new File(fileName);
-		FileInputStream fis = new FileInputStream(file);
-		FileOutputStream fos = new FileOutputStream(file + ".gz");
+	public static final int BUFSIZE = 256;  // Size of read buffer
 
-		// 让读写在两个线程中 避免死锁的可能
-		Thread thread = new Thread(new Runnable() {
-			@Override
+	public static void main(String[] args) throws IOException {
+
+		if (args.length != 3)  // Test for correct #  of args
+			throw new IllegalArgumentException("Parameter(s): <Server> <Port> <File>");
+
+		String server = args[0];               // Server name or IP address
+		int port = Integer.parseInt(args[1]);  // Server port
+		String filename = args[2];             // File to read data from
+
+		// Open input and output file (named input.gz)
+		final FileInputStream fileIn = new FileInputStream(filename);
+		FileOutputStream fileOut = new FileOutputStream(filename + ".gz");
+
+		// Create socket connected to server on specified port
+		final Socket sock = new Socket(server, port);
+
+		// Send uncompressed byte stream to server
+		Thread thread = new Thread() {
 			public void run() {
-				writeByte(socket, fis);
+				try {
+					SendBytes(sock, fileIn);
+				} catch (Exception ignored) {}
 			}
-		});
+		};
 		thread.start();
 
-		InputStream in = socket.getInputStream();
-		byte[] buffer = new byte[BUFF_SIZE];
-		int temp = 0;
-		while ((temp = in.read(buffer)) != -1) {
-			fos.write(buffer, 0, temp);
+		// Receive compressed byte stream from server
+		InputStream sockIn = sock.getInputStream();
+		int bytesRead;                      // Number of bytes read
+		byte[] buffer = new byte[BUFSIZE];  // Byte buffer
+		while ((bytesRead = sockIn.read(buffer)) != -1) {
+			fileOut.write(buffer, 0, bytesRead);
+			System.out.print("R");   // Reading progress indicator
 		}
-		System.out.println("获取压缩文件！");
-		fos.close();
-		socket.close();
+		System.out.println();      // End progress indicator line
+
+		sock.close();     // Close the socket and its streams
+		fileIn.close();   // Close file streams
+		fileOut.close();
 	}
 
-	private static void writeByte(Socket socket, FileInputStream fis) {
-		byte[] buffer = new byte[BUFF_SIZE];
-		int receive = 0;
-		OutputStream out;
-		try {
-			out = socket.getOutputStream();
-			while ((receive = fis.read(buffer)) != -1) {
-				out.write(buffer, 0, receive);
-			}
-			socket.shutdownOutput();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public static void SendBytes(Socket sock, InputStream fileIn)
+			throws IOException {
 
+		OutputStream sockOut = sock.getOutputStream();
+		int bytesRead;                      // Number of bytes read
+		byte[] buffer = new byte[BUFSIZE];  // Byte buffer
+		while ((bytesRead = fileIn.read(buffer)) != -1) {
+			sockOut.write(buffer, 0, bytesRead);
+			System.out.print("W");   // Writing progress indicator
+		}
+		sock.shutdownOutput();     // Done sending
 	}
 }

@@ -2,19 +2,14 @@ package char03;
 
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
-//下载自：http://www.javaxxz.com 最方便的Java学习社区
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-/**
- * 文本帧
- * 
- * joecqupt 下午2:51:25
- */
+
 public class DelimFramer implements Framer {
 
-	private InputStream in; // data source
-	private static final byte DELIMITER = '\n'; // messagedelimiter
+	private InputStream in;        // data source
+	private static final byte DELIMITER = '\n'; // message delimiter
 
 	public DelimFramer(InputStream in) {
 		this.in = in;
@@ -46,7 +41,6 @@ public class DelimFramer implements Framer {
 				}
 			}
 			messageBuffer.write(nextByte); // write byte to buffer
-			// 下载自：http://www.javaxxz.com 最方便的Java学习社区
 		}
 
 		return messageBuffer.toByteArray();

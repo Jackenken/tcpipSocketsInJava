@@ -4,56 +4,48 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class EchoProtocol implements Runnable {
-	private static final int BUFSIZE = 32;
-	private Socket clientSocket;
-	private Logger logger;
+	private static final int BUFSIZE = 32; // Size (in bytes) of I/O buffer
+	private Socket clntSock;               // Socket connect to client
+	private Logger logger;                 // Server logger
 
-	public EchoProtocol(Socket clientSocket, Logger logger) {
-		super();
-		this.clientSocket = clientSocket;
+	public EchoProtocol(Socket clntSock, Logger logger) {
+		this.clntSock = clntSock;
 		this.logger = logger;
 	}
 
-	public static void handleEchoClient(Socket clientSocket, Logger logger) {
+	public static void handleEchoClient(Socket clntSock, Logger logger) {
 		try {
-			InputStream in = clientSocket.getInputStream();
-			OutputStream out = clientSocket.getOutputStream();
-			int recive = 0;
-			byte[] reciveBuff = new byte[BUFSIZE];
-			int reciveTotal = 0;
+			// Get the input and output I/O streams from socket
+			InputStream in = clntSock.getInputStream();
+			OutputStream out = clntSock.getOutputStream();
 
-			try {
-				TimeUnit.SECONDS.sleep(10);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			int recvMsgSize; // Size of received message
+			int totalBytesEchoed = 0; // Bytes received from client
+			byte[] echoBuffer = new byte[BUFSIZE]; // Receive Buffer
+			// Receive until client closes connection, indicated by -1
+			while ((recvMsgSize = in.read(echoBuffer)) != -1) {
+				out.write(echoBuffer, 0, recvMsgSize);
+				totalBytesEchoed += recvMsgSize;
 			}
 
-			while ((recive = in.read(reciveBuff)) != -1) {
-				out.write(reciveBuff, 0, recive);
-				reciveTotal += recive;
-			}
-			System.out.println("recive total bytes: " + reciveTotal);
-		} catch (IOException e) {
-			e.printStackTrace();
-			logger.log(Level.WARNING, "exception in echo protocol", e);
+			logger.info("Client " + clntSock.getRemoteSocketAddress() + ", echoed "
+					+ totalBytesEchoed + " bytes.");
+
+		} catch (IOException ex) {
+			logger.log(Level.WARNING, "Exception in echo protocol", ex);
 		} finally {
 			try {
-				clientSocket.close();
+				clntSock.close();
 			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
-
 	}
 
-	@Override
 	public void run() {
-		handleEchoClient(clientSocket, logger);
+		handleEchoClient(clntSock, logger);
 	}
-
 }

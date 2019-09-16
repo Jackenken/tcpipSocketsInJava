@@ -1,54 +1,55 @@
 package char05;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.ByteBuffer;
+import java.io.IOException;
 
 public class EchoSelectorProtocol implements TCPProtocol {
-	private int buffSize;// the size of buffer
 
-	public EchoSelectorProtocol(int buffSize) {
-		super();
-		this.buffSize = buffSize;
+	private int bufSize; // Size of I/O buffer
+
+	public EchoSelectorProtocol(int bufSize) {
+		this.bufSize = bufSize;
 	}
 
-	@Override
-	public void handleAccpet(SelectionKey key) throws IOException {
-		System.out.println("accept");
-		SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
-		channel.configureBlocking(false);//设置信道为非阻塞
-		channel.register(key.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(buffSize));
-		//实际上也只有非阻塞的信道能够被注册 阻塞信道注册将抛出IllegalBlockingModeException异常
+	public void handleAccept(SelectionKey key) throws IOException {
+		SocketChannel clntChan = ((ServerSocketChannel) key.channel()).accept();
+		clntChan.configureBlocking(false); // Must be nonblocking to register
+		// Register the selector with new channel for read and attach byte buffer
+		clntChan.register(key.selector(), SelectionKey.OP_READ, ByteBuffer
+				.allocate(bufSize));
 	}
 
-	@Override
 	public void handleRead(SelectionKey key) throws IOException {
-		System.out.println("read");
-		SocketChannel channel = (SocketChannel) key.channel();
-		ByteBuffer buffer = (ByteBuffer) key.attachment();
-		long byteRead = channel.read(buffer);
-		System.out.println("read:" + new String(buffer.array()));
-		if (byteRead == -1) {
-			channel.close();//
-		} else if (byteRead > 0) {
+		// Client socket channel has pending data
+		SocketChannel clntChan = (SocketChannel) key.channel();
+		ByteBuffer buf = (ByteBuffer) key.attachment();
+		long bytesRead = clntChan.read(buf);
+		if (bytesRead == -1) { // Did the other end close?
+			clntChan.close();
+		} else if (bytesRead > 0) {
+			// Indicate via key that reading/writing are both of interest now.
 			key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		}
 	}
 
-	@Override
 	public void handleWrite(SelectionKey key) throws IOException {
-		System.out.println("write");
-		ByteBuffer buffer = (ByteBuffer) key.attachment();
-		buffer.flip();// 准备写
-		SocketChannel channel = (SocketChannel) key.channel();
-		System.out.println("write:" + new String(buffer.array()));
-		channel.write(buffer);
-		if (!buffer.hasRemaining()) { // 没有空余的空间 只能写入
+		/*
+		 * Channel is available for writing, and key is valid (i.e., client channel
+		 * not closed).
+		 */
+		// Retrieve data read earlier
+		ByteBuffer buf = (ByteBuffer) key.attachment();
+		buf.flip(); // Prepare buffer for writing
+		SocketChannel clntChan = (SocketChannel) key.channel();
+		clntChan.write(buf);
+		if (!buf.hasRemaining()) { // Buffer completely written?
+			// Nothing left, so no longer interested in writes
 			key.interestOps(SelectionKey.OP_READ);
 		}
-		buffer.compact();// 压缩ByteBuffer
+		buf.compact(); // Make room for more data to be read in
 	}
 
 }

@@ -4,49 +4,54 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class TimeLimitEchoProtocol implements Runnable {
+class TimeLimitEchoProtocol implements Runnable {
+	private static final int BUFSIZE = 32;  // Size (bytes) buffer
+	private static final String TIMELIMIT = "10000";  // Default limit (ms)
+	private static final String TIMELIMITPROP = "Timelimit";  // Thread property
 
-	private static final int TIME_LIMIT = 3000;// 超时时间3000毫秒
-	private static final int BUFF_SIZE = 32;
-
-	private Socket socket;
+	private static int timelimit;
+	private Socket clntSock;
 	private Logger logger;
 
-	public TimeLimitEchoProtocol(Socket socket, Logger logger) {
-		super();
-		this.socket = socket;
+	public TimeLimitEchoProtocol(Socket clntSock, Logger logger) {
+		this.clntSock = clntSock;
 		this.logger = logger;
+		// Get the time limit from the System properties or take the default
+		timelimit = Integer.parseInt(System.getProperty(TIMELIMITPROP,TIMELIMIT));
 	}
 
-	public static void handleEchoClient(Socket clientSocket, Logger logger) {
+	public static void handleEchoClient(Socket clntSock, Logger logger) {
+
 		try {
-			InputStream in = clientSocket.getInputStream();
-			OutputStream out = clientSocket.getOutputStream();
-			int recive = 0;
-			@SuppressWarnings("unused")
-			int reciveTotal = 0;
-			byte[] buffer = new byte[BUFF_SIZE];
-			long endTime = System.currentTimeMillis() + TIME_LIMIT;
-			int timeBoundMillis = TIME_LIMIT;
-			clientSocket.setSoTimeout(timeBoundMillis);
-			while ((timeBoundMillis > 0) && ((recive = in.read(buffer)) != -1)) {
-				out.write(buffer, 0, recive);
-				reciveTotal += recive;
-				timeBoundMillis = (int) (endTime - System.currentTimeMillis());
-				clientSocket.setSoTimeout(timeBoundMillis);
+			// Get the input and output I/O streams from socket
+			InputStream in = clntSock.getInputStream();
+			OutputStream out = clntSock.getOutputStream();
+			int recvMsgSize;                        // Size of received message
+			int totalBytesEchoed = 0;               // Bytes received from client
+			byte[] echoBuffer = new byte[BUFSIZE];  // Receive buffer
+			long endTime = System.currentTimeMillis() + timelimit;
+			int timeBoundMillis = timelimit;
+
+			clntSock.setSoTimeout(timeBoundMillis);
+			// Receive until client closes connection, indicated by -1
+			while ((timeBoundMillis > 0) &&     // catch zero values
+					((recvMsgSize = in.read(echoBuffer)) != -1)) {
+				out.write(echoBuffer, 0, recvMsgSize);
+				totalBytesEchoed += recvMsgSize;
+				timeBoundMillis = (int) (endTime - System.currentTimeMillis()) ;
+				clntSock.setSoTimeout(timeBoundMillis);
 			}
-		} catch (IOException e) {
-			logger.warning("Exception :" + e);
-			e.printStackTrace();
+			logger.info("Client " + clntSock.getRemoteSocketAddress() +
+					", echoed " + totalBytesEchoed + " bytes.");
+		} catch (IOException ex) {
+			logger.log(Level.WARNING, "Exception in echo protocol", ex);
 		}
-
 	}
 
-	@Override
 	public void run() {
-		handleEchoClient(socket, logger);
+		handleEchoClient(this.clntSock, this.logger);
 	}
-
 }

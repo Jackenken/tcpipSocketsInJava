@@ -1,63 +1,71 @@
 package char03;
 
 public class VoteMsg {
-	private boolean isInquiry; // true 为查询信息 false 为投票
-	private boolean isResponse;// true 为响应消息
-	private int candidateId;// [0,1000]
-	private long voteCount;// notzero in response
-	private static final int MAX_CANDIDATE_ID = 1000;
+	private boolean isInquiry; // true if inquiry; false if vote
+	private boolean isResponse;// true if response from server
+	private int candidateID;   // in [0,1000]
+	private long voteCount;    // nonzero only in response
 
-	public VoteMsg(boolean isInquiry, boolean isResponse, int candidateId, long voteCount)
+	public static final int MAX_CANDIDATE_ID = 1000;
+
+	public VoteMsg(boolean isResponse, boolean isInquiry, int candidateID, long voteCount)
 			throws IllegalArgumentException {
-		if (!isResponse && voteCount != 0) {
-			throw new IllegalArgumentException();
+		// check invariants
+		if (voteCount != 0 && !isResponse) {
+			throw new IllegalArgumentException("Request vote count must be zero");
 		}
-		if (candidateId < 0 || candidateId > MAX_CANDIDATE_ID) {
-			throw new IllegalArgumentException();
+		if (candidateID < 0 || candidateID > MAX_CANDIDATE_ID) {
+			throw new IllegalArgumentException("Bad Candidate ID: " + candidateID);
 		}
 		if (voteCount < 0) {
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Total must be >= zero");
 		}
-		this.isInquiry = isInquiry;
+		this.candidateID = candidateID;
 		this.isResponse = isResponse;
-		this.candidateId = candidateId;
+		this.isInquiry = isInquiry;
 		this.voteCount = voteCount;
-	}
-
-	public boolean isInquiry() {
-		return isInquiry;
 	}
 
 	public void setInquiry(boolean isInquiry) {
 		this.isInquiry = isInquiry;
 	}
 
-	public boolean isResponse() {
-		return isResponse;
-	}
-
 	public void setResponse(boolean isResponse) {
 		this.isResponse = isResponse;
 	}
 
-	public int getCandidateId() {
-		return candidateId;
+	public boolean isInquiry() {
+		return isInquiry;
 	}
 
-	public void setCandidateId(int candidateId) {
-		this.candidateId = candidateId;
+	public boolean isResponse() {
+		return isResponse;
+	}
+
+	public void setCandidateID(int candidateID) throws IllegalArgumentException {
+		if (candidateID < 0 || candidateID > MAX_CANDIDATE_ID) {
+			throw new IllegalArgumentException("Bad Candidate ID: " + candidateID);
+		}
+		this.candidateID = candidateID;
+	}
+
+	public int getCandidateID() {
+		return candidateID;
+	}
+
+	public void setVoteCount(long count) {
+		if ((count != 0 && !isResponse) || count < 0) {
+			throw new IllegalArgumentException("Bad vote count");
+		}
+		voteCount = count;
 	}
 
 	public long getVoteCount() {
 		return voteCount;
 	}
 
-	public void setVoteCount(long voteCount) {
-		this.voteCount = voteCount;
-	}
-
 	public String toString() {
-		String res = (isInquiry ? "inquiry" : "vote") + "for candidate " + candidateId;
+		String res = (isInquiry ? "inquiry" : "vote") + " for candidate " + candidateID;
 		if (isResponse) {
 			res = "response to " + res + " who now has " + voteCount + " vote(s)";
 		}

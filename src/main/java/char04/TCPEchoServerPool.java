@@ -7,28 +7,37 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class TCPEchoServerPool {
-	private static final int serverPort = 13131;
 
 	public static void main(String[] args) throws IOException {
-		Logger logger = Logger.getLogger("practical");
-		@SuppressWarnings("resource")
-		ServerSocket serverSocket = new ServerSocket(serverPort);
-		for (int i = 0; i < 10; i++) {
-			Thread thread = new Thread(new Runnable() {
-				@Override
+
+		if (args.length != 2) { // Test for correct # of args
+			throw new IllegalArgumentException("Parameter(s): <Port> <Threads>");
+		}
+
+		int echoServPort = Integer.parseInt(args[0]); // Server port
+		int threadPoolSize = Integer.parseInt(args[1]);
+
+		// Create a server socket to accept client connection requests
+		final ServerSocket servSock = new ServerSocket(echoServPort);
+
+		final Logger logger = Logger.getLogger("practical");
+
+		// Spawn a fixed number of threads to service clients
+		for (int i = 0; i < threadPoolSize; i++) {
+			Thread thread = new Thread() {
 				public void run() {
 					while (true) {
 						try {
-							Socket clientSocket = serverSocket.accept();
-							System.out.println(Thread.currentThread().getName() + " handle clientSocket");
-							EchoProtocol.handleEchoClient(clientSocket, logger);
-						} catch (IOException e) {
-							logger.log(Level.WARNING, "handle clientSocket failed", e);
+							Socket clntSock = servSock.accept(); // Wait for a connection
+							EchoProtocol.handleEchoClient(clntSock, logger); // Handle it
+						} catch (IOException ex) {
+							logger.log(Level.WARNING, "Client accept failed", ex);
 						}
 					}
 				}
-			});
+			};
 			thread.start();
+			logger.info("Created and started Thread = " + thread.getName());
 		}
 	}
 }

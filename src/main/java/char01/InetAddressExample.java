@@ -1,38 +1,50 @@
 package char01;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Enumeration;
+import java.net.*;
 
 public class InetAddressExample {
-	public static void main(String[] args) throws SocketException, UnknownHostException {
-		Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-		if (interfaces == null) {
-			System.out.println("this is no interface");
-		} else {
-			while (interfaces.hasMoreElements()) {
-				NetworkInterface networkInterface = interfaces.nextElement();
-				Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
-				if (!addresses.hasMoreElements()) {
-					System.out.println("there has not address");
-				}
-				while (addresses.hasMoreElements()) {
-					InetAddress address = addresses.nextElement();
-					System.out.println(address instanceof Inet4Address ? "v4" : "v6");
-					System.out.println(address.getHostAddress());
+
+//	javac char01/InetAddressExample.java
+//	java  char01/InetAddressExample www.mkp.com blah.blah 129.35.69.7
+	public static void main(String[] args) {
+
+		// Get the network interfaces and associated addresses for this host
+		try {
+			Enumeration<NetworkInterface> interfaceList = NetworkInterface.getNetworkInterfaces();
+			if (interfaceList == null) {
+				System.out.println("--No interfaces found--");
+			} else {
+				while (interfaceList.hasMoreElements()) {
+					NetworkInterface iface = interfaceList.nextElement();
+					System.out.println("Interface " + iface.getName() + ":");
+					Enumeration<InetAddress> addrList = iface.getInetAddresses();
+					if (!addrList.hasMoreElements()) {
+						System.out.println("\t(No addresses for this interface)");
+					}
+					while (addrList.hasMoreElements()) {
+						InetAddress address = addrList.nextElement();
+						System.out.print("\tAddress "
+								+ ((address instanceof Inet4Address ? "(v4)"
+								: (address instanceof Inet6Address ? "(v6)" : "(?)"))));
+						System.out.println(": " + address.getHostAddress());
+					}
 				}
 			}
+		} catch (SocketException se) {
+			System.out.println("Error getting network interfaces:" + se.getMessage());
 		}
+
+		// Get name(s)/address(es) of hosts given on command line
 		for (String host : args) {
-			System.out.println(host+":");
-			InetAddress[] inets=InetAddress.getAllByName(host);
-			for(InetAddress inet:inets){
-				System.out.println(inet.getHostName()+":"+inet.getHostAddress());
-				System.out.println("toString:"+inet.toString());
-				System.out.println("caninical:"+inet.getCanonicalHostName());
+			try {
+				System.out.println(host + ":");
+				InetAddress[] addressList = InetAddress.getAllByName(host);
+				for (InetAddress address : addressList) {
+					System.out.println("\t" + address.getHostName() + "/" + address.getHostAddress());
+				}
+			} catch (UnknownHostException e) {
+				System.out.println("\tUnable to find address for " + host);
 			}
 		}
 	}

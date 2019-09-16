@@ -4,20 +4,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class VoteService {
-	private Map<Integer, Long> result = new HashMap<>();
+
+	// Map of candidates to number of votes
+	private Map<Integer, Long> results = new HashMap<Integer, Long>();
 
 	public VoteMsg handleRequest(VoteMsg msg) {
-		if (msg.isResponse()) {
+		if (msg.isResponse()) { // If response, just send it back
 			return msg;
 		}
-		msg.setResponse(true);
-		int candidate = msg.getCandidateId();
-		Long count=result.get(candidate);
-		if(count==null){
-			count=0L;
+		msg.setResponse(true); // Make message a response
+		// Get candidate ID and vote count
+		int candidate = msg.getCandidateID();
+		Long count = results.get(candidate);
+		if (count == null) {
+			count = 0L; // Candidate does not exist
 		}
-		if(!msg.isInquiry()){
-			result.put(candidate, ++count);
+		if (!msg.isInquiry()) {
+			results.put(candidate, ++count); // If vote, increment count
 		}
 		msg.setVoteCount(count);
 		return msg;

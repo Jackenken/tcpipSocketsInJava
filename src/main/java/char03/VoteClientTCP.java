@@ -1,42 +1,57 @@
 package char03;
 
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
 public class VoteClientTCP {
+
 	public static final int CANDIDATEID = 888;
 
-	public static void main(String[] args) throws Exception {
-//		if (args.length != 2) {
-//			throw new IllegalArgumentException();
-//		}
-		String destAddr = "127.0.0.1";
-//		int port = Integer.parseInt(args[1]);
-		int port = 13131;
-		Socket socket = new Socket(destAddr, port);
-		OutputStream out = socket.getOutputStream();
-		InputStream in = socket.getInputStream();
+	public static void main(String args[]) throws Exception {
 
-		VoteMsg msg = new VoteMsg(true, false, CANDIDATEID, 0);
+		if (args.length != 2) { // Test for correct # of args
+			throw new IllegalArgumentException("Parameter(s): <Server> <Port>");
+		}
+
+		String destAddr = args[0]; // Destination address
+		int destPort = Integer.parseInt(args[1]); // Destination port
+
+		Socket sock = new Socket(destAddr, destPort);
+		OutputStream out = sock.getOutputStream();
+
+		// Change Bin to Text for a different framing strategy
 		VoteMsgCoder coder = new VoteMsgBinCoder();
-		byte[] data = coder.toWire(msg);
-		Framer framer = new LengthFramer(in);
-		System.out.println("now send query");
-		framer.frameMsg(data, out);
-		// send a vote msg
-		msg.setInquiry(false);
-		data = coder.toWire(msg);
-		System.out.println("now send vote");
-		framer.frameMsg(data, out);
+		// Change Length to Delim for a different encoding strategy
+		Framer framer = new LengthFramer(sock.getInputStream());
 
-		// recive msg
-		data = framer.nextMsg();
-		msg = coder.fromWire(data);
-		System.out.println("client recive response:" + msg);
-		data = framer.nextMsg();
-		msg = coder.fromWire(data);
-		System.out.println("client recive response:" + msg);
-		socket.close();
+		// Create an inquiry request (2nd arg = true)
+		VoteMsg msg = new VoteMsg(false, true, CANDIDATEID, 0);
+		byte[] encodedMsg = coder.toWire(msg);
+
+		// Send request
+		System.out.println("Sending Inquiry (" + encodedMsg.length + " bytes): ");
+		System.out.println(msg);
+		framer.frameMsg(encodedMsg, out);
+
+		// Now send a vote
+		msg.setInquiry(false);
+		encodedMsg = coder.toWire(msg);
+		System.out.println("Sending Vote (" + encodedMsg.length + " bytes): ");
+		framer.frameMsg(encodedMsg, out);
+
+		// Receive inquiry response
+		encodedMsg = framer.nextMsg();
+		msg = coder.fromWire(encodedMsg);
+		System.out.println("Received Response (" + encodedMsg.length
+				+ " bytes): ");
+		System.out.println(msg);
+
+		// Receive vote response
+		msg = coder.fromWire(framer.nextMsg());
+		System.out.println("Received Response (" + encodedMsg.length
+				+ " bytes): ");
+		System.out.println(msg);
+
+		sock.close();
 	}
 }

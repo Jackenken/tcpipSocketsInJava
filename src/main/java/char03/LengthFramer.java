@@ -6,48 +6,40 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-/**
- * 长度帧
- * 
- * joecqupt 下午2:49:23
- */
 public class LengthFramer implements Framer {
-	private static final int MAX_LENGTH = 65535;
-	private static final int BYTE_MASK = 0xFF;
-	private static final int BYTE_SHIFT = 8;
-	@SuppressWarnings("unused")
-	private static final int SHORT_MASK = 0xFFFF;
-	private DataInputStream in;
+	public static final int MAXMESSAGELENGTH = 65535;
+	public static final int BYTEMASK = 0xff;
+	public static final int SHORTMASK = 0xffff;
+	public static final int BYTESHIFT = 8;
 
-	public LengthFramer(InputStream in) {
-		super();
+	private DataInputStream in; // wrapper for data I/O
+
+	public LengthFramer(InputStream in) throws IOException {
 		this.in = new DataInputStream(in);
 	}
 
-	@Override
-	public void frameMsg(byte[] message, OutputStream out) throws Exception {
-		if (message.length > MAX_LENGTH) {
-			throw new IOException("message too long!");
+	public void frameMsg(byte[] message, OutputStream out) throws IOException {
+		if (message.length > MAXMESSAGELENGTH) {
+			throw new IOException("message too long");
 		}
-		out.write((message.length >> BYTE_SHIFT) & BYTE_MASK);
-		out.write(message.length & BYTE_MASK);
-		//写入消息长度
+		// write length prefix
+		out.write((message.length >> BYTESHIFT) & BYTEMASK);
+		out.write(message.length & BYTEMASK);
+		// write message
 		out.write(message);
 		out.flush();
 	}
 
-	@Override
-	public byte[] nextMsg() throws Exception {
-		int messageLength = 0;
+	public byte[] nextMsg() throws IOException {
+		int length;
 		try {
-			messageLength = in.readUnsignedShort();
-		} catch (EOFException e) {
+			length = in.readUnsignedShort(); // read 2 bytes
+		} catch (EOFException e) { // no (or 1 byte) message
 			return null;
 		}
-		byte[] msg = new byte[messageLength];
-		in.readFully(msg);
-		//使用 dataInputStream 读取帧数据
+		// 0 <= length <= 65535
+		byte[] msg = new byte[length];
+		in.readFully(msg); // if exception, it's a framing error.
 		return msg;
 	}
-
 }

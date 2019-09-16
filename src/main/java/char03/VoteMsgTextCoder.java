@@ -2,70 +2,76 @@ package char03;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Scanner;
 
-/**
- * 文本编码器
- * 
- * joecqupt 下午2:55:15
- */
 public class VoteMsgTextCoder implements VoteMsgCoder {
-	private static final String DELIMSTR = " ";
+	/*
+	 * Wire Format "VOTEPROTO" <"v" | "i"> [<RESPFLAG>] <CANDIDATE> [<VOTECNT>]
+	 * Charset is fixed by the wire format.
+	 */
+
+	// Manifest constants for encoding
+	public static final String MAGIC = "Voting";
+	public static final String VOTESTR = "v";
+	public static final String INQSTR = "i";
+	public static final String RESPONSESTR = "R";
+
+	public static final String CHARSETNAME = "US-ASCII";
+	public static final String DELIMSTR = " ";
 	public static final int MAX_WIRE_LENGTH = 2000;
-	@SuppressWarnings("unused")
-	private static final String CHARSETNAME = "US-ASCII";
-	private static final String MAGIC = "Voting";
-	private static final String VOTESTR = "v";
-	private static final String INQSTR = "i";
-	private static final String RESPONSETER = "R";
 
-	@Override
 	public byte[] toWire(VoteMsg msg) throws IOException {
-		String msgString = MAGIC + DELIMSTR + (msg.isInquiry() ? INQSTR : VOTESTR) + DELIMSTR
-				+ (msg.isResponse() ? RESPONSETER : "") + DELIMSTR + msg.getCandidateId() + DELIMSTR
-				+ msg.getVoteCount();
-
-		return msgString.getBytes();
+		String msgString = MAGIC + DELIMSTR + (msg.isInquiry() ? INQSTR : VOTESTR)
+				+ DELIMSTR + (msg.isResponse() ? RESPONSESTR + DELIMSTR : "")
+				+ Integer.toString(msg.getCandidateID()) + DELIMSTR
+				+ Long.toString(msg.getVoteCount());
+		byte data[] = msgString.getBytes(CHARSETNAME);
+		return data;
 	}
-	
-	@SuppressWarnings("resource")
-	@Override
-	public VoteMsg fromWire(byte[] input) throws IOException {
-		ByteArrayInputStream bais = new ByteArrayInputStream(input);
-		Scanner scanner = new Scanner(bais);
-		String magic = scanner.next();
-		if (!magic.equals(MAGIC)) {
-			throw new IOException("bad magic!");
-		}
-		boolean inInquiry;
+
+	public VoteMsg fromWire(byte[] message) throws IOException {
+		ByteArrayInputStream msgStream = new ByteArrayInputStream(message);
+		Scanner s = new Scanner(new InputStreamReader(msgStream, CHARSETNAME));
+		boolean isInquiry;
 		boolean isResponse;
-		int candidateId;
+		int candidateID;
 		long voteCount;
-		String token = null;
-		token = scanner.next();
-		if (token.equals(VOTESTR)) {
-			inInquiry = false;
-		} else if (!token.equals(INQSTR)) {
-			throw new IOException();
-		} else {
-			inInquiry = true;
-		}
-		token = scanner.next();
-		if (token.equals(RESPONSETER)) {
-			isResponse = true;
-			token = scanner.next();
-		} else {
-			isResponse = false;
-		}
-		candidateId = Integer.parseInt(token);
-		if (isResponse) {
-			token = scanner.next();
-			voteCount = Long.parseLong(token);
-		} else {
-			voteCount = 0;
-		}
-		scanner.close();
-		return new VoteMsg(inInquiry, isResponse, candidateId, voteCount);
-	}
+		String token;
 
+		try {
+			token = s.next();
+			if (!token.equals(MAGIC)) {
+				throw new IOException("Bad magic string: " + token);
+			}
+			token = s.next();
+			if (token.equals(VOTESTR)) {
+				isInquiry = false;
+			} else if (!token.equals(INQSTR)) {
+				throw new IOException("Bad vote/inq indicator: " + token);
+			} else {
+				isInquiry = true;
+			}
+
+			token = s.next();
+			if (token.equals(RESPONSESTR)) {
+				isResponse = true;
+				token = s.next();
+			} else {
+				isResponse = false;
+			}
+			// Current token is candidateID
+			// Note: isResponse now valid
+			candidateID = Integer.parseInt(token);
+			if (isResponse) {
+				token = s.next();
+				voteCount = Long.parseLong(token);
+			} else {
+				voteCount = 0;
+			}
+		} catch (IOException ioe) {
+			throw new IOException("Parse error...");
+		}
+		return new VoteMsg(isResponse, isInquiry, candidateID, voteCount);
+	}
 }
