@@ -6,7 +6,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class TcpEchoClient {
+public class TCPEchoClient {
 	public static void main(String[] args) throws UnknownHostException, IOException {
 		if (args.length < 2 || args.length > 3) {
 			throw new IllegalArgumentException();

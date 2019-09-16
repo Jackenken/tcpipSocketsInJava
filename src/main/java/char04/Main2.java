@@ -12,7 +12,7 @@ public class Main2 {
 			public void run() {
 				try {
 					TCPEchoServerThread.main(new String[] { "13131" });
-					// TcpEchoServer.main(new String[] { "13131" });
+					// TCPEchoServer.main(new String[] { "13131" });
 				} catch (NumberFormatException | IOException  e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

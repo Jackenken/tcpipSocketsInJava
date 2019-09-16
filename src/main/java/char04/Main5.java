@@ -4,16 +4,18 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Main3 {
+public class Main5 {
 	public static void main(String[] args) {
 		ExecutorService exec = Executors.newCachedThreadPool();
 		exec.execute(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					TCPEchoServerPool.main(new String[] { "13131" });
+					TCPEchoServerExecutorLimit.main(new String[] { "13131" });
+					// TCPEchoServerExecutor.main(new String[] { "13131" });
+					// TCPEchoServerPool.main(new String[] { "13131" });
 					// TCPEchoServerThread.main(new String[] { "13131" });
-					// TcpEchoServer.main(new String[] { "13131" });
+					// TCPEchoServer.main(new String[] { "13131" });
 				} catch (NumberFormatException | IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -26,8 +28,10 @@ public class Main3 {
 				@Override
 				public void run() {
 					try {
-						TcpEchoClient.main(new String[] { "127.0.0.1", "Tcp-sleep-test", "13131" });
+						TcpEchoClientTimeLimit.main(new String[] { "127.0.0.1", "Tcp-sleep-test", "13131" });
 					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}

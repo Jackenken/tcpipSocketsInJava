@@ -7,7 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
-public class TcpEchoServer {
+public class TCPEchoServer {
 	private static int buffer = 64;
 
 	public static void main(String[] args) throws NumberFormatException, IOException, InterruptedException {

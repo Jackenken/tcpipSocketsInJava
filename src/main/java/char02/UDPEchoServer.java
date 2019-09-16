@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-public class UdpEchoServer {
+public class UDPEchoServer {
 	private static int maxLength = 255;
 
 	public static void main(String[] args) throws IOException {

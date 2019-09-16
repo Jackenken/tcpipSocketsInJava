@@ -6,7 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-public class UdpEchoClientTimeout {
+public class UDPEchoClientTimeout {
 	private static int timeOut = 3000;
 	private static int times = 5;
 
